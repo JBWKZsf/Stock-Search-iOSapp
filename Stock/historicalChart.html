@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <!-- IE Edge Meta Tag -->
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <!-- Viewport -->
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- Minified CSS -->
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css">
+  <link href="https://gitcdn.github.io/bootstrap-toggle/2.2.2/css/bootstrap-toggle.min.css" rel="stylesheet">
+  
+  <!-- Optional theme -->
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap-theme.min.css">
+
+  <title>Stock Search</title>
+  
+  <link rel="stylesheet" href="http://code.jquery.com/ui/1.11.4/themes/smoothness/jquery-ui.css">
+  <script src="http://code.jquery.com/jquery-1.10.2.js"></script>
+  <script src="http://code.jquery.com/ui/1.11.4/jquery-ui.js"></script>
+    
+  <script src="https://code.highcharts.com/stock/highstock.js"></script>
+  <script src="https://code.highcharts.com/stock/modules/exporting.js"></script>
+
+ 
+  <script type="text/javascript">
+
+              //var Symbol = "AAPL"
+
+              var tmp=getInput(Symbol);
+              var queryArray=JSON.stringify(tmp);
+             ajaxStockCharts(queryArray);
+     
+
+
+     function ajaxStockCharts(queryArray){
+          $.ajax({
+                type:"GET",
+                url:"http://tribal-map-127218.appspot.com/",
+                data:{chartSymbol:queryArray},
+                dataType:"json",
+                success:function(json){
+                    //console.log(json);
+                     if (!json || json.Message){
+                          console.error("Error: ", json.Message);
+                          return;
+                      }
+                     render(json);
+                   
+                },
+                error: function(response,txtStatus){
+                      console.log(response,txtStatus)
+                  }
+                
+            })
+
+        }
+        
+        
+        //build the query object
+        function getInput(companySymbol){
+            return {
+                  Normalized: false,
+                  NumberOfDays: 1095,
+                  DataPeriod: "Day",
+                  Elements: [
+                      {
+                          Symbol:companySymbol,
+                          Type: "price",
+                          Params: ["ohlc"] 
+                      }
+                  ]
+              }
+        }
+        
+        //fix the date
+        function fixDate(dateIn){
+             var dat = new Date(dateIn);
+              return Date.UTC(dat.getFullYear(), dat.getMonth(), dat.getDate());
+        }
+        
+        //get the ohlc data especially the close data
+        function getOHLC(json){
+              var dates = json.Dates || [];
+              var elements = json.Elements || [];
+              var chartSeries = [];
+
+              if (elements[0]){
+
+                  for (var i = 0, datLen = dates.length; i < datLen; i++) {
+                      var dat = fixDate(dates[i]);
+                      var pointData = [
+                          dat,
+                          elements[0].DataSeries['close'].values[i]
+                      ];
+                      chartSeries.push(pointData);
+                  };
+              }
+              return chartSeries;
+        }
+        
+        
+        
+        //render the json object of charts
+        function render(data){
+                           
+              var ohlc_c = getOHLC(data);
+              
+              // create the chart
+              $("#interactive_charts").highcharts('StockChart', {
+                  // chart:{
+                  //     height:500
+                  // },
+
+                  navigation:{
+                    buttonOptions:{
+                      enabled: false
+                    }
+                  },
+                  
+                  rangeSelector: {
+                    inputEnabled:false,
+                    allButtonsEnabled: true,
+                    buttons: [{
+                            type:'week',
+                            count:1,
+                            text:'1w'
+                          }, {
+                            type: 'month',
+                            count: 1,
+                            text: '1m'
+                          }, {
+                            type: 'month',
+                            count: 3,
+                            text: '3m'
+                          }, {
+                            type: 'month',
+                            count: 6,
+                            text: '6m'
+                          }, {
+                            type: 'ytd',
+                            text: 'YTD'
+                          }, {
+                            type: 'year',
+                            count: 1,
+                            text: '1y'
+                          }, {
+                            type: 'all',
+                            text: 'All'
+                          }],
+                      selected: 0
+                  },
+
+                  title: {
+                      text: Symbol + ' Stock Value'
+                  },
+                  
+
+                  series: [{
+                      type: 'area',
+                      name: Symbol,
+                      data: ohlc_c,
+                      threshold:null,
+                      tooltip:{
+                          valueDecimals:2,
+                          valuePrefix:"$"
+                      },
+                      fillColor:{
+                          linearGradient:{
+                                  x1: 0,
+                                  y1: 0,
+                                  x2: 0,
+                                  y2: 1
+                          },
+                          stops : [
+                              [0, Highcharts.getOptions().colors[0]],
+                              [1, Highcharts.Color(Highcharts.getOptions().colors[0]).setOpacity(0).get('rgba')]
+                          ]    
+                      }
+                     
+                      }]
+              });
+           
+           
+        }
+
+
+
+  </script>
+
+</head>
+   
+   <body>
+    <br>
+    <br>
+      <div class="container-fuild" id="interactive_charts">
+
+      </div>
+ </body>
+</html>
